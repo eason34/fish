@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fishing Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: linear-gradient(to bottom, #a2d4f2, #ffffff);
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            margin-top: 20px;
+        }
+        #game-area {
+            padding: 20px;
+        }
+        #button-area, #fishing-area {
+            margin: 10px 0;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            font-size: 16px;
+        }
+        .status-box {
+            margin: 10px auto;
+            padding: 10px;
+            border: 1px solid #333;
+            max-width: 400px;
+            background-color: #fff9dc;
+        }
+    </style>
+</head>
+<body>
+    <h1>Fishing Game 🎣</h1>
+    <div id="game-area">
+        <div class="status-box" id="status">Welcome to the fishing game!</div>
+        <div id="button-area">
+            <button onclick="game.startFishing()">Start Fishing</button>
+            <button onclick="game.startChallenge()">Start Challenge</button>
+            <button onclick="game.buyBait()">Buy Bait (50 coins)</button>
+            <button onclick="game.buyNet()">Buy Net (100 coins)</button>
+        </div>
+        <div id="fishing-area">
+            <select onchange="game.changeWaterBody(this.value)">
+                <option value="Pond">Pond</option>
+                <option value="River">River</option>
+                <option value="Ocean">Ocean</option>
+            </select>
+        </div>
+        <div class="status-box" id="coins">💰 Coins: 100</div>
+        <div class="status-box" id="fishCaught">🐟 Fish Caught: 0</div>
+        <div class="status-box" id="baitLevel">🪱 Bait Level: 1</div>
+        <div class="status-box" id="netStatus">🕸️ Net: ❌ No Net</div>
+        <div class="status-box" id="challengeStatus">Challenge: Not active</div>
+    </div>
+
+    <script>
+        class FishingGame {
+            constructor() {
+                this.fishCaught = 0;
+                this.isFishing = false;
+                this.rodLevel = 1;
+                this.coins = 100;
+                this.currentWaterBody = "Pond";
+                this.baitLevel = 1;
+                this.netOwned = false;
+                this.challengeActive = false;
+                this.challengeTimer = 0;
+                this.challengeTarget = null;
+
+                this.fishTypes = {
+                    Pond: [
+                        { name: "Bluegill", rarity: "Common", value: 5 },
+                        { name: "Catfish", rarity: "Uncommon", value: 10 },
+                        { name: "Golden Carp", rarity: "Rare", value: 25 }
+                    ],
+                    River: [
+                        { name: "Trout", rarity: "Common", value: 8 },
+                        { name: "Salmon", rarity: "Uncommon", value: 15 },
+                        { name: "Sturgeon", rarity: "Rare", value: 40 }
+                    ],
+                    Ocean: [
+                        { name: "Mackerel", rarity: "Common", value: 7 },
+                        { name: "Tuna", rarity: "Uncommon", value: 20 },
+                        { name: "Shark", rarity: "Rare", value: 50 },
+                        { name: "Golden Whale", rarity: "Legendary", value: 200 }
+                    ]
+                };
+
+                this.updateUI();
+            }
+
+            startFishing() {
+                if (this.isFishing) return;
+                this.isFishing = true;
+                this.updateStatus("Casting the fishing line... 🎣");
+
+                let fishingTime = 2000 - this.rodLevel * 200 - this.baitLevel * 100;
+
+                setTimeout(() => {
+                    this.catchFish();
+                }, fishingTime);
+            }
+
+            catchFish() {
+                this.isFishing = false;
+                const fish = this.getRandomFish();
+                this.fishCaught++;
+                this.coins += fish.value;
+                this.updateStatus(`You caught a ${fish.name} (${fish.rarity})! 💰 +${fish.value} Coins`);
+                this.updateUI();
+
+                if (this.challengeActive && fish.name === this.challengeTarget) {
+                    this.completeChallenge();
+                }
+            }
+
+            getRandomFish() {
+                const fishList = this.fishTypes[this.currentWaterBody];
+                const rarityBoost = this.baitLevel * 5;
+                let random = Math.random() * 100;
+                let accumulatedChance = 0;
+
+                for (const fish of fishList) {
+                    let baseChance = fish.rarity === "Common" ? 50 : fish.rarity === "Uncommon" ? 30 : 20;
+                    baseChance += rarityBoost;
+                    accumulatedChance += baseChance;
+                    if (random <= accumulatedChance) {
+                        return fish;
+                    }
+                }
+                return fishList[0];
+            }
+
+            changeWaterBody(newWaterBody) {
+                if (this.fishTypes[newWaterBody]) {
+                    this.currentWaterBody = newWaterBody;
+                    this.updateStatus(`You moved to the ${newWaterBody}.`);
+                    this.updateUI();
+                }
+            }
+
+            startChallenge() {
+                if (this.challengeActive) return;
+                this.challengeActive = true;
+                this.challengeTimer = 30;
+                const fishList = this.fishTypes[this.currentWaterBody];
+                this.challengeTarget = fishList[Math.floor(Math.random() * fishList.length)].name;
+
+                this.updateStatus(`🎯 Challenge: Catch a ${this.challengeTarget} in 30 seconds!`);
+                this.updateUI();
+
+                this.challengeInterval = setInterval(() => {
+                    this.challengeTimer--;
+                    if (this.challengeTimer <= 0) {
+                        this.failChallenge();
+                    }
+                    this.updateUI();
+                }, 1000);
+            }
+
+            completeChallenge() {
+                clearInterval(this.challengeInterval);
+                this.challengeActive = false;
+                this.coins += 50;
+                this.updateStatus(`🏆 Challenge Completed! +50 Coins!`);
+                this.updateUI();
+            }
+
+            failChallenge() {
+                clearInterval(this.challengeInterval);
+                this.challengeActive = false;
+                this.updateStatus(`❌ Challenge Failed! Try again!`);
+                this.updateUI();
+            }
+
+            buyBait() {
+                if (this.coins >= 50) {
+                    this.coins -= 50;
+                    this.baitLevel++;
+                    this.updateStatus(`🪱 Upgraded bait to level ${this.baitLevel}!`);
+                    this.updateUI();
+                } else {
+                    this.updateStatus("❌ Not enough coins to buy bait!");
+                }
+            }
+
+            buyNet() {
+                if (this.coins >= 100 && !this.netOwned) {
+                    this.coins -= 100;
+                    this.netOwned = true;
+                    this.updateStatus("🛠 Bought a fishing net! Catch multiple fish at once!");
+                    this.updateUI();
+                } else if (this.netOwned) {
+                    this.updateStatus("⚠️ You already own a fishing net!");
+                } else {
+                    this.updateStatus("❌ Not enough coins to buy a net!");
+                }
+            }
+
+            updateUI() {
+                document.getElementById("coins").innerText = `💰 Coins: ${this.coins}`;
+                document.getElementById("fishCaught").innerText = `🐟 Fish Caught: ${this.fishCaught}`;
+                document.getElementById("baitLevel").innerText = `🪱 Bait Level: ${this.baitLevel}`;
+                document.getElementById("netStatus").innerText = this.netOwned ? "✅ Net Owned" : "❌ No Net";
+                document.getElementById("challengeStatus").innerText = this.challengeActive
+                    ? `⏳ Time Left: ${this.challengeTimer}s`
+                    : "Challenge: Not active";
+            }
+
+            updateStatus(message) {
+                document.getElementById("status").innerText = message;
+            }
+        }
+
+        const game = new FishingGame();
+    </script>
+</body>
+</html>
